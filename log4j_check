@@ -1,0 +1,30 @@
+#!/usr/bin/perl
+use strict;
+use feature qw/say/;
+
+say 'looking for log4j';
+my @file = `find / -name log4j-core*jar`;
+
+say 'checking versions';
+for my $f (@file) {
+    chomp $f;
+    say "\t$f";
+    my $manifest = `unzip -p $f META-INF/MANIFEST.MF`;
+    my ($version) = $manifest =~ /Log4jReleaseVersion: (.*)/i;
+    $version *= 1;
+    my ( $major, $minor ) = split /\./, $version;
+    if ( $major < 2 or $minor >= 17 ) {
+        say "\t\tversion $version is OK";
+    }
+    else {
+        say "\t\tversion $version is NOT OK";
+        my $found = `fgrep -ir JndiLookup $f`;
+        if ($found) {
+            say "\t\tdeleting JndiLookup.class";
+            `zip -q -d $f org/apache/logging/log4j/core/lookup/JndiLookup.class`;
+        }
+        else {
+            say "\t\thowever JndiLookup.class was not found";
+        }
+    }
+}
